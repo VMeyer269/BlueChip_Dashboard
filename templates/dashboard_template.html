@@ -1,0 +1,647 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blue-Chip Dashboard</title>
+<style>
+:root {
+  color-scheme: dark;
+  --page: #0d0d0d;
+  --surface-1: #1a1a19;
+  --surface-2: #232321;
+  --surface-3: #2c2c2a;
+  --text-primary: #f0efec;
+  --text-secondary: #c3c2b7;
+  --text-muted: #898781;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --border: rgba(255,255,255,0.10);
+  --accent: #3987e5;
+  --up: #0ca30c;
+  --down: #e66767;
+  --warn-bg: #3a2c0a;
+  --warn-ink: #fab219;
+  /* Score-Bestandteile (Kategorial-Slots 1–4) */
+  --c-mom: #3987e5;
+  --c-val: #d95926;
+  --c-ana: #199e70;
+  --c-news: #c98500;
+  /* Branchen (Kategorial-Slots 1–7 + Sonstige) */
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+  --s5: #d55181; --s6: #008300; --s7: #9085e9; --s-other: #898781;
+  --radius: 14px;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--page);
+  color: var(--text-primary);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); }
+.wrap { max-width: 1320px; margin: 0 auto; padding: 0 16px 48px; }
+
+/* ---------- Hinweis-Banner ---------- */
+.disclaimer {
+  position: sticky; top: 0; z-index: 30;
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+  border-bottom: 1px solid rgba(250,178,25,0.35);
+  font-size: 14px;
+}
+.disclaimer .wrap { display: flex; gap: 10px 18px; align-items: center; flex-wrap: wrap; padding-top: 9px; padding-bottom: 9px; }
+.disclaimer strong { font-weight: 700; letter-spacing: .01em; }
+.disclaimer .ts { color: var(--text-secondary); margin-left: auto; font-variant-numeric: tabular-nums; }
+
+header.top { padding: 28px 0 8px; }
+header.top h1 { margin: 0 0 4px; font-size: 26px; letter-spacing: -0.01em; }
+header.top p { margin: 0; color: var(--text-secondary); max-width: 760px; }
+
+section { margin-top: 28px; }
+h2 { font-size: 17px; margin: 0 0 12px; font-weight: 650; }
+.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--radius); }
+
+/* ---------- KPI-Kacheln ---------- */
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.kpi { padding: 16px 18px; min-width: 0; }
+.kpi .label { color: var(--text-muted); font-size: 12.5px; text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+.kpi .big { font-size: 34px; font-weight: 700; margin-top: 6px; line-height: 1.1; }
+.kpi .sub { color: var(--text-secondary); font-size: 13px; margin-top: 4px; }
+.kpi ol { list-style: none; padding: 0; margin: 8px 0 0; }
+.kpi li { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-top: 1px solid var(--border); cursor: pointer; min-width: 0; }
+.kpi li:first-child { border-top: 0; }
+.kpi li:hover .nm { color: var(--text-primary); text-decoration: underline; }
+.kpi li .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); }
+.kpi li .tk { font-weight: 650; color: var(--text-primary); font-size: 13px; width: 70px; flex-shrink: 0; }
+.kpi li .sc { font-variant-numeric: tabular-nums; font-weight: 650; }
+.split { display: flex; height: 10px; border-radius: 5px; overflow: hidden; gap: 2px; margin: 12px 0 8px; }
+.split span { display: block; height: 100%; }
+.split-legend { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-secondary); gap: 8px; }
+.split-legend b { color: var(--text-primary); }
+.dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+
+/* ---------- Filter ---------- */
+.filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; }
+.filters input[type=search], .filters select {
+  background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border);
+  border-radius: 10px; padding: 9px 12px; font: inherit; font-size: 14px; min-height: 40px;
+}
+.filters input[type=search] { flex: 1 1 220px; min-width: 0; }
+.seg { display: inline-flex; background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 3px; }
+.seg button { background: none; border: 0; color: var(--text-secondary); font: inherit; font-size: 14px; padding: 6px 12px; border-radius: 7px; cursor: pointer; min-height: 32px; }
+.seg button.on { background: var(--surface-3); color: var(--text-primary); font-weight: 600; }
+.range { display: inline-flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 14px; }
+.range input { accent-color: var(--accent); width: 120px; }
+.count { color: var(--text-muted); font-size: 13px; margin-left: auto; }
+
+/* ---------- Tabelle ---------- */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { padding: 10px 10px; text-align: right; white-space: nowrap; }
+th { position: sticky; top: 0; background: var(--surface-1); color: var(--text-muted); font-weight: 600; font-size: 12.5px;
+     text-transform: uppercase; letter-spacing: .04em; cursor: pointer; user-select: none; border-bottom: 1px solid var(--axis); }
+th:hover { color: var(--text-primary); }
+th .arr { opacity: .9; margin-left: 3px; }
+th.l, td.l { text-align: left; }
+tbody tr { border-top: 1px solid var(--grid); cursor: pointer; }
+tbody tr:hover { background: var(--surface-2); }
+tbody tr:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+td { font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+td.name { color: var(--text-primary); max-width: 230px; overflow: hidden; text-overflow: ellipsis; }
+td.name small { display: block; color: var(--text-muted); font-size: 12px; }
+.up { color: var(--up); } .down { color: var(--down); }
+.flag { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 5px; background: var(--surface-3); color: var(--text-secondary); letter-spacing: .03em; }
+.scorecell { display: flex; align-items: center; gap: 10px; justify-content: flex-end; }
+.scorecell b { color: var(--text-primary); width: 34px; text-align: right; font-size: 15px; }
+.stack { display: flex; gap: 2px; width: 120px; height: 10px; background: var(--surface-3); border-radius: 4px; overflow: hidden; }
+.stack span { height: 100%; }
+.empty { padding: 30px; text-align: center; color: var(--text-muted); }
+
+/* ---------- Legende & Scatter ---------- */
+.legend { display: flex; flex-wrap: wrap; gap: 6px 8px; margin: 0 0 10px; }
+.legend button { display: inline-flex; align-items: center; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-secondary);
+  border-radius: 999px; padding: 5px 11px; font: inherit; font-size: 13px; cursor: pointer; }
+.legend button.off { opacity: .4; }
+.legend button.solo { border-color: var(--text-secondary); color: var(--text-primary); }
+.chart-card { padding: 16px; position: relative; }
+.chart-note { color: var(--text-muted); font-size: 12.5px; margin-top: 6px; }
+svg text { font-family: var(--font); }
+.tooltip { position: absolute; pointer-events: none; z-index: 5; background: var(--surface-3); border: 1px solid var(--border); border-radius: 10px;
+  padding: 8px 11px; font-size: 13px; color: var(--text-primary); box-shadow: 0 8px 24px rgba(0,0,0,.45); max-width: 240px; display: none; }
+.tooltip .t-sub { color: var(--text-secondary); font-size: 12px; }
+
+/* ---------- Methodik ---------- */
+.method { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; }
+.method .card { padding: 14px 16px; font-size: 13.5px; color: var(--text-secondary); }
+.method h3 { margin: 0 0 6px; font-size: 14.5px; color: var(--text-primary); display: flex; align-items: center; }
+footer { margin-top: 36px; color: var(--text-muted); font-size: 12.5px; border-top: 1px solid var(--border); padding-top: 16px; }
+
+/* ---------- Detail-Dialog ---------- */
+.backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 50; display: none; align-items: center; justify-content: center; padding: 20px; }
+.backdrop.open { display: flex; }
+.modal { width: min(860px, 100%); max-height: calc(100vh - 40px); overflow-y: auto; background: var(--surface-1); border: 1px solid var(--border);
+  border-radius: 18px; box-shadow: 0 24px 64px rgba(0,0,0,.6); }
+.m-head { display: flex; align-items: flex-start; gap: 12px; padding: 20px 22px 14px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface-1); z-index: 2; }
+.m-head h3 { margin: 0; font-size: 20px; }
+.m-head .meta { color: var(--text-secondary); font-size: 13.5px; margin-top: 3px; }
+.m-head .price { margin-left: auto; text-align: right; font-variant-numeric: tabular-nums; }
+.m-head .price b { font-size: 22px; display: block; }
+.close { background: var(--surface-3); color: var(--text-primary); border: 0; width: 36px; height: 36px; border-radius: 50%; font-size: 20px; cursor: pointer; flex-shrink: 0; }
+.m-body { padding: 18px 22px 24px; display: grid; gap: 22px; }
+.m-body h4 { margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
+.total-row { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+.total-row .big { font-size: 40px; font-weight: 750; line-height: 1; }
+.total-row .rk { color: var(--text-secondary); }
+.bar-row { display: grid; grid-template-columns: 120px 1fr 78px; gap: 10px; align-items: center; margin: 8px 0 2px; }
+.bar-row .bl { font-weight: 600; font-size: 14px; display: flex; align-items: center; }
+.bar-row .track { height: 12px; background: var(--surface-3); border-radius: 4px; overflow: hidden; }
+.bar-row .fill { height: 100%; border-radius: 0 4px 4px 0; }
+.bar-row .bv { text-align: right; font-variant-numeric: tabular-nums; font-weight: 650; white-space: nowrap; }
+.bar-expl { margin: 0 0 6px 130px; color: var(--text-muted); font-size: 12.5px; }
+.grid-kv { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 1px; background: var(--border); border-radius: 12px; overflow: hidden; }
+.grid-kv div { background: var(--surface-2); padding: 10px 12px; min-width: 0; }
+.grid-kv div > span { display: block; color: var(--text-muted); font-size: 12px; }
+.grid-kv b { font-variant-numeric: tabular-nums; font-size: 15px; font-weight: 650; }
+.range52 { margin-top: 12px; }
+.range52 .rt { position: relative; height: 8px; background: var(--surface-3); border-radius: 4px; margin: 6px 0; }
+.range52 .rm { position: absolute; top: -4px; width: 4px; height: 16px; border-radius: 2px; background: var(--text-primary); transform: translateX(-2px); }
+.range52 .rl { display: flex; justify-content: space-between; color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.spark-wrap { position: relative; }
+.news { display: grid; gap: 10px; }
+.news a { display: block; text-decoration: none; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 11px 13px; color: var(--text-primary); }
+.news a:hover { border-color: var(--text-muted); }
+.news .nt { font-weight: 600; }
+.news .nm { color: var(--text-muted); font-size: 12.5px; margin-top: 4px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.badge { font-size: 11.5px; font-weight: 700; padding: 2px 7px; border-radius: 5px; }
+.badge.positiv { background: rgba(12,163,12,.18); color: #3bc43b; }
+.badge.negativ { background: rgba(230,103,103,.18); color: #f08a8a; }
+.badge.neutral { background: var(--surface-3); color: var(--text-secondary); }
+.notes { margin: 8px 0 0; padding-left: 18px; color: var(--warn-ink); font-size: 13px; }
+
+/* ---------- Responsiv ---------- */
+@media (max-width: 1000px) {
+  .kpis { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .method { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .hide-md { display: none; }
+}
+@media (max-width: 640px) {
+  body { font-size: 14px; }
+  header.top h1 { font-size: 21px; }
+  .kpis { grid-template-columns: minmax(0,1fr); }
+  .kpi .big { font-size: 30px; }
+  .method { grid-template-columns: minmax(0,1fr); }
+  .hide-sm { display: none; }
+  th, td { padding: 9px 7px; }
+  .stack { width: 64px; }
+  td.name { max-width: 140px; }
+  .disclaimer { position: static; }
+  .disclaimer .ts { margin-left: 0; }
+  .backdrop { padding: 0; align-items: stretch; }
+  .modal { max-height: 100vh; border-radius: 0; height: 100%; }
+  .m-head { padding: 14px 16px 12px; flex-wrap: wrap; }
+  .m-head .price { margin-left: 0; text-align: left; order: 3; width: 100%; display: flex; gap: 10px; align-items: baseline; }
+  .m-head .price b { display: inline; }
+  .m-body { padding: 14px 16px 24px; }
+  .grid-kv { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .bar-row { grid-template-columns: 92px 1fr 70px; }
+  .bar-expl { margin-left: 0; }
+  .count { margin-left: 0; width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<div class="disclaimer" role="note">
+  <div class="wrap">
+    <span>⚠ <strong>Demo – keine Anlageberatung.</strong> Der Score ist ein vereinfachtes Rechenmodell und keine Kauf- oder Verkaufsempfehlung.</span>
+    <span class="ts" id="ts"></span>
+  </div>
+</div>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Blue-Chip Dashboard</h1>
+    <p id="intro"></p>
+  </header>
+
+  <section aria-label="Kennzahlen">
+    <div class="kpis" id="kpis"></div>
+  </section>
+
+  <section aria-labelledby="h-table">
+    <h2 id="h-table">Alle Aktien</h2>
+    <div class="filters">
+      <input type="search" id="q" placeholder="Suche nach Name oder Ticker …" aria-label="Suche">
+      <div class="seg" id="country" role="group" aria-label="Land">
+        <button data-v="all" class="on">Alle</button><button data-v="US">US</button><button data-v="DE">DE</button>
+      </div>
+      <select id="sector" aria-label="Branche"></select>
+      <label class="range">Score ≥ <input type="range" id="minScore" min="0" max="100" step="5" value="0"><b id="minScoreV">0</b></label>
+      <span class="count" id="count"></span>
+    </div>
+    <div class="card table-wrap">
+      <table>
+        <thead><tr id="thead"></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-scatter">
+    <h2 id="h-scatter">Score vs. KGV</h2>
+    <div class="card chart-card" id="scatterCard">
+      <div class="legend" id="legend"></div>
+      <div id="scatter"></div>
+      <div class="tooltip" id="tip"></div>
+      <div class="chart-note" id="scatterNote"></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-method">
+    <h2 id="h-method">So entsteht der Kauf-Score (0–100)</h2>
+    <div class="method" id="method"></div>
+  </section>
+
+  <footer id="footer"></footer>
+</div>
+
+<div class="backdrop" id="backdrop" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle" id="modal"></div>
+</div>
+
+<script id="dashboard-data" type="application/json">/*__DATA__*/</script>
+<script>
+(function () {
+"use strict";
+const DATA = JSON.parse(document.getElementById("dashboard-data").textContent);
+const STOCKS = DATA.stocks;
+const META = DATA.meta;
+
+// ---------------------------------------------------------------- Helfer
+const nf = (d) => new Intl.NumberFormat("de-DE", { minimumFractionDigits: d, maximumFractionDigits: d });
+const f0 = nf(0), f1 = nf(1), f2 = nf(2);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const cur = (c) => ({ USD: "$", EUR: "€" }[c] || c);
+const dash = "–";
+const fmtPrice = (v, c) => v == null ? dash : `${f2.format(v)} ${cur(c)}`;
+const fmtPct = (v, d = 1) => v == null ? dash : `${v > 0 ? "+" : v < 0 ? "−" : ""}${nf(d).format(Math.abs(v))} %`;
+const pctClass = (v) => v == null ? "" : v > 0 ? "up" : v < 0 ? "down" : "";
+function fmtCap(v, c) {
+  if (v == null) return dash;
+  if (v >= 1e12) return `${f2.format(v / 1e12)} Bio. ${cur(c)}`;
+  return `${f0.format(v / 1e9)} Mrd. ${cur(c)}`;
+}
+const fmtDate = (iso) => {
+  const d = new Date(iso);
+  return isNaN(d) ? iso : d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+};
+const fmtDateTime = (iso) => {
+  const d = new Date(iso);
+  return isNaN(d) ? iso : d.toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+};
+const capUSD = (s) => s.market_cap == null ? 0 : s.currency === "EUR" ? s.market_cap * (META.eurusd || 1.08) : s.market_cap;
+
+const SECTOR_DE = {
+  "Technology": "Technologie", "Financial Services": "Finanzen", "Healthcare": "Gesundheit",
+  "Consumer Cyclical": "Zyklischer Konsum", "Consumer Defensive": "Basiskonsum", "Industrials": "Industrie",
+  "Communication Services": "Kommunikation", "Energy": "Energie", "Utilities": "Versorger",
+  "Basic Materials": "Grundstoffe", "Real Estate": "Immobilien", "Unbekannt": "Unbekannt"
+};
+const sectorDE = (s) => SECTOR_DE[s] || s;
+const REC_DE = { strong_buy: "Starker Kauf", buy: "Kaufen", hold: "Halten", underperform: "Untergewichten", sell: "Verkaufen", none: dash };
+const COMP = [
+  { key: "momentum", label: "Momentum", color: "var(--c-mom)" },
+  { key: "valuation", label: "Bewertung", color: "var(--c-val)" },
+  { key: "analysts", label: "Analysten", color: "var(--c-ana)" },
+  { key: "news", label: "Nachrichten", color: "var(--c-news)" },
+];
+
+// Branchenfarben: die 7 größten Branchen (nach Anzahl) in fester Slot-Reihenfolge, Rest = Sonstige
+const sectorCounts = {};
+STOCKS.forEach((s) => (sectorCounts[s.sector] = (sectorCounts[s.sector] || 0) + 1));
+const sectorsBySize = Object.keys(sectorCounts).sort((a, b) => sectorCounts[b] - sectorCounts[a] || a.localeCompare(b));
+const SECTOR_COLOR = {};
+sectorsBySize.forEach((s, i) => (SECTOR_COLOR[s] = i < 7 ? `var(--s${i + 1})` : "var(--s-other)"));
+const colorGroup = (sector) => (sectorsBySize.indexOf(sector) < 7 ? sector : "__other");
+const otherSectors = sectorsBySize.slice(7);
+
+// ---------------------------------------------------------------- Kopf
+document.getElementById("ts").textContent = `Datenstand: ${fmtDateTime(META.generated_at)} · Quelle: Yahoo Finance (yfinance)`;
+document.getElementById("intro").textContent =
+  `Die ${STOCKS.filter((s) => s.country === "US").length} größten Werte des S&P 500 und die ${STOCKS.filter((s) => s.country === "DE").length} größten Werte des DAX nach Marktkapitalisierung, ` +
+  `bewertet mit einem transparenten Kauf-Score aus Momentum, Bewertung, Analysten und Nachrichten-Stimmung.`;
+
+// ---------------------------------------------------------------- KPIs
+function renderKPIs() {
+  const avg = STOCKS.reduce((a, s) => a + s.score.total, 0) / STOCKS.length;
+  const sorted = [...STOCKS].sort((a, b) => b.score.total - a.score.total);
+  const med = sorted[Math.floor(sorted.length / 2)].score.total;
+  const list = (arr) => `<ol>${arr.map((s) => `<li data-sym="${esc(s.symbol)}" tabindex="0"><span class="tk">${esc(s.symbol)}</span><span class="nm">${esc(s.name)}</span><span class="sc">${f1.format(s.score.total)}</span></li>`).join("")}</ol>`;
+  const us = STOCKS.filter((s) => s.country === "US"), de = STOCKS.filter((s) => s.country === "DE");
+  const capUS = us.reduce((a, s) => a + capUSD(s), 0), capDE = de.reduce((a, s) => a + capUSD(s), 0);
+  const shUS = capUS / (capUS + capDE) * 100;
+  const avgUS = us.reduce((a, s) => a + s.score.total, 0) / us.length;
+  const avgDE = de.reduce((a, s) => a + s.score.total, 0) / de.length;
+  document.getElementById("kpis").innerHTML = `
+    <div class="card kpi"><div class="label">Ø Kauf-Score</div><div class="big">${f1.format(avg)}</div>
+      <div class="sub">Median ${f1.format(med)} · Spanne ${f1.format(sorted.at(-1).score.total)}–${f1.format(sorted[0].score.total)}</div>
+      <div class="sub">Ø US ${f1.format(avgUS)} · Ø DE ${f1.format(avgDE)}</div></div>
+    <div class="card kpi"><div class="label">Top 3</div>${list(sorted.slice(0, 3))}</div>
+    <div class="card kpi"><div class="label">Flop 3</div>${list(sorted.slice(-3).reverse())}</div>
+    <div class="card kpi"><div class="label">Anteil US / DE</div>
+      <div class="split-legend" style="margin-top:8px"><span><span class="dot" style="background:var(--s1)"></span>US <b>${us.length}</b> Titel</span><span><span class="dot" style="background:var(--s2)"></span>DE <b>${de.length}</b> Titel</span></div>
+      <div class="split" role="img" aria-label="Anteil nach Anzahl: US ${f0.format(us.length / STOCKS.length * 100)} Prozent"><span style="width:${us.length / STOCKS.length * 100}%;background:var(--s1)"></span><span style="flex:1;background:var(--s2)"></span></div>
+      <div class="sub">nach Anzahl: ${f0.format(us.length / STOCKS.length * 100)} % / ${f0.format(de.length / STOCKS.length * 100)} %</div>
+      <div class="split" role="img" aria-label="Anteil nach Marktkapitalisierung: US ${f1.format(shUS)} Prozent"><span style="width:${shUS}%;background:var(--s1)"></span><span style="flex:1;background:var(--s2)"></span></div>
+      <div class="sub">nach Marktkap. (in USD): ${f1.format(shUS)} % / ${f1.format(100 - shUS)} %</div></div>`;
+  document.querySelectorAll(".kpi li").forEach((li) => {
+    li.addEventListener("click", () => openDetail(li.dataset.sym));
+    li.addEventListener("keydown", (e) => { if (e.key === "Enter") openDetail(li.dataset.sym); });
+  });
+}
+
+// ---------------------------------------------------------------- Tabelle
+const COLS = [
+  { key: "rank", label: "#", get: (s) => s.score.rank, cls: "", render: (s) => s.score.rank },
+  { key: "name", label: "Aktie", get: (s) => s.name.toLowerCase(), cls: "l name",
+    render: (s) => `${esc(s.name)}<small>${esc(s.symbol)}</small>` },
+  { key: "country", label: "Land", get: (s) => s.country, cls: "l", render: (s) => `<span class="flag">${s.country}</span>` },
+  { key: "sector", label: "Branche", get: (s) => sectorDE(s.sector), cls: "l hide-sm", render: (s) => `<span class="dot" style="background:${SECTOR_COLOR[s.sector]}"></span>${esc(sectorDE(s.sector))}` },
+  { key: "price", label: "Kurs", get: (s) => s.price, cls: "hide-sm", render: (s) => fmtPrice(s.price, s.currency) },
+  { key: "chg_1d", label: "1T", get: (s) => s.chg_1d, cls: "hide-md", render: (s) => `<span class="${pctClass(s.chg_1d)}">${fmtPct(s.chg_1d)}</span>` },
+  { key: "chg_1m", label: "1M", get: (s) => s.chg_1m, cls: "hide-sm", render: (s) => `<span class="${pctClass(s.chg_1m)}">${fmtPct(s.chg_1m)}</span>` },
+  { key: "chg_1y", label: "1J", get: (s) => s.chg_1y, cls: "hide-sm", render: (s) => `<span class="${pctClass(s.chg_1y)}">${fmtPct(s.chg_1y)}</span>` },
+  { key: "cap", label: "Marktkap.", get: (s) => capUSD(s), cls: "hide-md", render: (s) => fmtCap(s.market_cap, s.currency) },
+  { key: "pe", label: "KGV", get: (s) => s.pe_trailing, cls: "hide-md", render: (s) => s.pe_trailing == null ? dash : f1.format(s.pe_trailing) },
+  { key: "div", label: "Div.", get: (s) => s.dividend_yield_pct, cls: "hide-md", render: (s) => s.dividend_yield_pct == null ? dash : `${f2.format(s.dividend_yield_pct)} %` },
+  { key: "upside", label: "Kursziel Δ", get: (s) => s.score.detail.upside_pct, cls: "hide-md", render: (s) => `<span class="${pctClass(s.score.detail.upside_pct)}">${fmtPct(s.score.detail.upside_pct)}</span>` },
+  { key: "score", label: "Score", get: (s) => s.score.total, cls: "",
+    render: (s) => `<div class="scorecell"><div class="stack" aria-hidden="true">${COMP.map((c) => `<span style="width:${s.score[c.key]}%;background:${c.color}"></span>`).join("")}</div><b>${f1.format(s.score.total)}</b></div>` },
+];
+const state = { sort: "score", dir: -1, q: "", country: "all", sector: "all", min: 0, hiddenSectors: new Set(), soloGroup: null };
+
+function filtered() {
+  const q = state.q.trim().toLowerCase();
+  return STOCKS.filter((s) =>
+    (state.country === "all" || s.country === state.country) &&
+    (state.sector === "all" || s.sector === state.sector) &&
+    s.score.total >= state.min &&
+    (!q || s.name.toLowerCase().includes(q) || s.symbol.toLowerCase().includes(q)));
+}
+
+function renderTable() {
+  const col = COLS.find((c) => c.key === state.sort);
+  const rows = filtered().sort((a, b) => {
+    const va = col.get(a), vb = col.get(b);
+    if (va == null && vb == null) return 0;
+    if (va == null) return 1;               // fehlende Werte immer ans Ende
+    if (vb == null) return -1;
+    return (va < vb ? -1 : va > vb ? 1 : 0) * state.dir;
+  });
+  document.getElementById("thead").innerHTML = COLS.map((c) =>
+    `<th class="${c.cls.replace("name", "")}" data-k="${c.key}" scope="col" aria-sort="${state.sort === c.key ? (state.dir > 0 ? "ascending" : "descending") : "none"}">${c.label}${state.sort === c.key ? `<span class="arr">${state.dir > 0 ? "▲" : "▼"}</span>` : ""}</th>`).join("");
+  document.getElementById("tbody").innerHTML = rows.length ? rows.map((s) =>
+    `<tr data-sym="${esc(s.symbol)}" tabindex="0">${COLS.map((c) => `<td class="${c.cls}">${c.render(s)}</td>`).join("")}</tr>`).join("")
+    : `<tr><td colspan="${COLS.length}" class="empty">Keine Aktie passt zu den Filtern.</td></tr>`;
+  document.getElementById("count").textContent = `${rows.length} von ${STOCKS.length} Aktien`;
+  document.querySelectorAll("#thead th").forEach((th) => th.addEventListener("click", () => {
+    const k = th.dataset.k;
+    if (state.sort === k) state.dir *= -1;
+    else { state.sort = k; state.dir = ["name", "country", "sector", "rank"].includes(k) ? 1 : -1; }
+    renderTable();
+  }));
+  document.querySelectorAll("#tbody tr[data-sym]").forEach((tr) => {
+    tr.addEventListener("click", () => openDetail(tr.dataset.sym));
+    tr.addEventListener("keydown", (e) => { if (e.key === "Enter") openDetail(tr.dataset.sym); });
+  });
+}
+
+function initFilters() {
+  const sel = document.getElementById("sector");
+  sel.innerHTML = `<option value="all">Alle Branchen</option>` +
+    [...sectorsBySize].sort((a, b) => sectorDE(a).localeCompare(sectorDE(b), "de"))
+      .map((s) => `<option value="${esc(s)}">${esc(sectorDE(s))} (${sectorCounts[s]})</option>`).join("");
+  sel.addEventListener("change", () => { state.sector = sel.value; update(); });
+  document.getElementById("q").addEventListener("input", (e) => { state.q = e.target.value; update(); });
+  document.querySelectorAll("#country button").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll("#country button").forEach((x) => x.classList.toggle("on", x === b));
+    state.country = b.dataset.v; update();
+  }));
+  const ms = document.getElementById("minScore");
+  ms.addEventListener("input", () => { state.min = +ms.value; document.getElementById("minScoreV").textContent = ms.value; update(); });
+}
+function update() { renderTable(); renderScatter(); }
+
+// ---------------------------------------------------------------- Scatter
+const tip = document.getElementById("tip");
+function showTip(html, evt) {
+  const card = document.getElementById("scatterCard").getBoundingClientRect();
+  tip.innerHTML = html; tip.style.display = "block";
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  let x = evt.clientX - card.left + 14, y = evt.clientY - card.top - h - 10;
+  if (x + w > card.width - 8) x = evt.clientX - card.left - w - 14;
+  if (y < 4) y = evt.clientY - card.top + 16;
+  tip.style.left = `${Math.max(4, x)}px`; tip.style.top = `${y}px`;
+}
+const hideTip = () => (tip.style.display = "none");
+
+function renderLegend() {
+  const groups = sectorsBySize.slice(0, 7).map((s) => ({ id: s, label: sectorDE(s), color: SECTOR_COLOR[s] }));
+  if (otherSectors.length) groups.push({ id: "__other", label: `Sonstige (${otherSectors.map(sectorDE).join(", ")})`, color: "var(--s-other)" });
+  const el = document.getElementById("legend");
+  el.innerHTML = groups.map((g) => `<button data-g="${esc(g.id)}" class="${state.soloGroup && state.soloGroup !== g.id ? "off" : ""} ${state.soloGroup === g.id ? "solo" : ""}" aria-pressed="${state.soloGroup === g.id}"><span class="dot" style="background:${g.color}"></span>${esc(g.label)}</button>`).join("");
+  el.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
+    state.soloGroup = state.soloGroup === b.dataset.g ? null : b.dataset.g;
+    renderLegend(); renderScatter();
+  }));
+}
+
+function renderScatter() {
+  const host = document.getElementById("scatter");
+  const W = Math.max(300, host.clientWidth), small = W < 560;
+  const H = small ? 340 : 440;
+  const m = { t: 16, r: small ? 14 : 24, b: 46, l: small ? 40 : 50 };
+  const visible = new Set(filtered().map((s) => s.symbol));
+  const pts = STOCKS.filter((s) => s.pe_trailing != null && s.pe_trailing > 0);
+  const noPE = STOCKS.filter((s) => !(s.pe_trailing != null && s.pe_trailing > 0));
+  const pes = pts.map((s) => s.pe_trailing);
+  const lx0 = Math.log10(Math.max(1, Math.min(...pes) * 0.85)), lx1 = Math.log10(Math.max(...pes) * 1.15);
+  const scores = STOCKS.map((s) => s.score.total);
+  const y0 = Math.max(0, Math.floor((Math.min(...scores) - 5) / 10) * 10), y1 = Math.min(100, Math.ceil((Math.max(...scores) + 5) / 10) * 10);
+  const X = (pe) => m.l + (Math.log10(pe) - lx0) / (lx1 - lx0) * (W - m.l - m.r);
+  const Y = (v) => m.t + (1 - (v - y0) / (y1 - y0)) * (H - m.t - m.b);
+  const xticks = [5, 10, 15, 20, 30, 50, 75, 100, 150, 200, 300, 500, 1000].filter((t) => Math.log10(t) >= lx0 && Math.log10(t) <= lx1)
+    .filter((t, i, arr) => !small || [5, 10, 20, 50, 100, 200, 500, 1000].includes(t));
+  const yticks = []; for (let v = y0; v <= y1; v += 10) yticks.push(v);
+
+  let svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Streudiagramm Kauf-Score gegen KGV, eingefärbt nach Branche">`;
+  yticks.forEach((v) => { svg += `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--grid)" stroke-width="1"/><text x="${m.l - 8}" y="${Y(v) + 4}" text-anchor="end" font-size="11.5" fill="var(--text-muted)">${v}</text>`; });
+  xticks.forEach((t) => { svg += `<line x1="${X(t)}" x2="${X(t)}" y1="${m.t}" y2="${H - m.b}" stroke="var(--grid)" stroke-width="1"/><text x="${X(t)}" y="${H - m.b + 17}" text-anchor="middle" font-size="11.5" fill="var(--text-muted)">${t}</text>`; });
+  svg += `<line x1="${m.l}" x2="${W - m.r}" y1="${H - m.b}" y2="${H - m.b}" stroke="var(--axis)"/>`;
+  svg += `<text x="${(m.l + W - m.r) / 2}" y="${H - 6}" text-anchor="middle" font-size="12" fill="var(--text-secondary)">KGV (letzte 12 Monate, logarithmische Achse)</text>`;
+  svg += `<text transform="translate(12 ${(m.t + H - m.b) / 2}) rotate(-90)" text-anchor="middle" font-size="12" fill="var(--text-secondary)">Kauf-Score</text>`;
+
+  // Punkte: gedimmte zuerst, aktive oben
+  const isActive = (s) => visible.has(s.symbol) && (!state.soloGroup || colorGroup(s.sector) === state.soloGroup);
+  const ordered = [...pts].sort((a, b) => isActive(a) - isActive(b));
+  const top = new Set([...pts].filter(isActive).sort((a, b) => b.score.total - a.score.total).slice(0, small ? 3 : 5).map((s) => s.symbol));
+  ordered.forEach((s) => {
+    const act = isActive(s), cx = X(s.pe_trailing), cy = Y(s.score.total);
+    svg += `<g class="pt" data-sym="${esc(s.symbol)}" style="cursor:pointer" opacity="${act ? 1 : 0.15}">
+      <circle cx="${cx}" cy="${cy}" r="14" fill="transparent"/>
+      <circle cx="${cx}" cy="${cy}" r="${small ? 5.5 : 6.5}" fill="${SECTOR_COLOR[s.sector]}" stroke="var(--surface-1)" stroke-width="2"/></g>`;
+  });
+  // Direkte Labels für die besten Punkte – rechts, sonst links; bei Überlappung weglassen
+  const R = small ? 5.5 : 6.5;
+  const placed = pts.filter(isActive).map((s) => {
+    const x = X(s.pe_trailing), y = Y(s.score.total);
+    return { x0: x - R, x1: x + R, y0: y - R, y1: y + R };   // Punkte gelten als belegt
+  });
+  const hits = (b) => placed.some((p) => b.x0 < p.x1 && b.x1 > p.x0 && b.y0 < p.y1 && b.y1 > p.y0);
+  [...pts].filter((s) => top.has(s.symbol)).sort((a, b) => b.score.total - a.score.total).forEach((s) => {
+    const cx = X(s.pe_trailing), cy = Y(s.score.total), w = s.symbol.length * 6.6 + 2;
+    const right = { x0: cx + 9, x1: cx + 9 + w, y0: cy - 8, y1: cy + 6, anchor: "start", tx: cx + 10 };
+    const left = { x0: cx - 9 - w, x1: cx - 9, y0: cy - 8, y1: cy + 6, anchor: "end", tx: cx - 10 };
+    const box = [right, left].find((b) => !hits(b) && b.x0 >= m.l && b.x1 <= W - m.r);
+    if (!box) return;
+    placed.push(box);
+    svg += `<text x="${box.tx}" y="${cy + 4}" text-anchor="${box.anchor}" font-size="11.5" fill="var(--text-secondary)" pointer-events="none">${esc(s.symbol)}</text>`;
+  });
+  svg += `</svg>`;
+  host.innerHTML = svg;
+  host.querySelectorAll(".pt").forEach((g) => {
+    const s = STOCKS.find((x) => x.symbol === g.dataset.sym);
+    const html = `<b>${esc(s.name)}</b> <span class="t-sub">${esc(s.symbol)}</span><br><span class="t-sub">${esc(sectorDE(s.sector))} · ${s.country}</span><br>Score <b>${f1.format(s.score.total)}</b> · KGV <b>${f1.format(s.pe_trailing)}</b><br><span class="t-sub">Branchen-KGV ${f1.format(s.score.detail.pe_benchmark)}</span>`;
+    g.addEventListener("mousemove", (e) => showTip(html, e));
+    g.addEventListener("mouseleave", hideTip);
+    g.addEventListener("click", () => { hideTip(); openDetail(s.symbol); });
+  });
+  document.getElementById("scatterNote").textContent = noPE.length
+    ? `Nicht dargestellt (kein positives KGV, z. B. wegen Verlust): ${noPE.map((s) => `${s.name} (Score ${f1.format(s.score.total)})`).join(", ")}. Gedimmte Punkte sind durch die Tabellenfilter oder die Legende ausgeblendet.`
+    : "Gedimmte Punkte sind durch die Tabellenfilter oder die Legende ausgeblendet.";
+}
+
+// ---------------------------------------------------------------- Methodik
+function renderMethod() {
+  const txt = {
+    momentum: "Kursentwicklung über 1 Monat und 1 Jahr, jeweils als Rang unter allen 50 Aktien. Die stärkste Aktie bekommt 12,5 Punkte pro Zeitraum, die schwächste 0.",
+    valuation: "KGV im Verhältnis zum Median-KGV der eigenen Branche in der Auswahl. Halb so teuer wie die Branche ergibt 25 Punkte, gleich teuer 12,5, 1,5-fach oder teurer 0. Bei Verlust gibt es 0 Punkte.",
+    analysts: "Konsens (1 = Starker Kauf ergibt 12,5, 2 = Kaufen 6,25, 3 = Halten oder schlechter 0) plus Abstand zum mittleren Kursziel (−5 % ergibt 0, +30 % oder mehr 12,5).",
+    news: "Die 3 neuesten Schlagzeilen werden per Wortliste als positiv (+1), neutral (0) oder negativ (−1) eingestuft. Punkte = 12,5 × (1 + Durchschnitt).",
+  };
+  document.getElementById("method").innerHTML = COMP.map((c) =>
+    `<div class="card"><h3><span class="dot" style="background:${c.color}"></span>${c.label} · 25 Pkt.</h3>${txt[c.key]}</div>`).join("");
+  document.getElementById("footer").innerHTML =
+    `<p><b>Demo – keine Anlageberatung.</b> Alle Daten stammen von Yahoo Finance über die Python-Bibliothek yfinance (Version ${esc(META.yfinance_version)}), sie können verzögert, unvollständig oder fehlerhaft sein. ` +
+    `Auswahl: ${esc(META.selection_rule)}. Indexmitglieder laut Wikipedia (S&P 500: ${META.sp500_members}, DAX: ${META.dax_members}). ` +
+    `Marktkapitalisierung in Landeswährung, für den US/DE-Vergleich mit EUR/USD ${META.eurusd ? f2.format(META.eurusd) : "~1,08"} umgerechnet. ` +
+    `Die Stimmungsanalyse ist ein einfaches Wortlisten-Verfahren und kann Ironie oder Kontext nicht erkennen.</p>` +
+    `<p>Datenstand: ${fmtDateTime(META.generated_at)} · Erzeugt mit scripts/build_dashboard.py</p>`;
+}
+
+// ---------------------------------------------------------------- Detail
+const backdrop = document.getElementById("backdrop"), modal = document.getElementById("modal");
+let lastFocus = null;
+
+function sparkline(s) {
+  const v = s.history.weekly_close || [];
+  if (v.length < 2) return "<p class='chart-note'>Keine Kurshistorie verfügbar.</p>";
+  const W = 760, H = 120, p = 6;
+  const lo = Math.min(...v), hi = Math.max(...v);
+  const x = (i) => p + i / (v.length - 1) * (W - 2 * p), y = (val) => p + (1 - (val - lo) / (hi - lo || 1)) * (H - 2 * p);
+  const d = v.map((val, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(val).toFixed(1)}`).join("");
+  const col = v.at(-1) >= v[0] ? "var(--up)" : "var(--down)";
+  return `<div class="spark-wrap"><svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none" role="img" aria-label="Kursverlauf der letzten 12 Monate (Wochenschlusskurse)">
+    <path d="${d}" fill="none" stroke="${col}" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>
+    <div class="range52"><div class="rl"><span>vor 12 Monaten: ${fmtPrice(v[0], s.currency)}</span><span>Tief ${fmtPrice(lo, s.currency)} · Hoch ${fmtPrice(hi, s.currency)}</span><span>aktuell: ${fmtPrice(v.at(-1), s.currency)}</span></div></div></div>`;
+}
+
+function openDetail(sym) {
+  const s = STOCKS.find((x) => x.symbol === sym);
+  if (!s) return;
+  const d = s.score.detail;
+  const expl = {
+    momentum: `1M: ${fmtPct(s.chg_1m)} → Rang-Perzentil ${d.momentum_1m_pct_rank == null ? dash : f1.format(d.momentum_1m_pct_rank)} (${f1.format(d.momentum_1m_pts)} Pkt.) · 1J: ${fmtPct(s.chg_1y)} → Perzentil ${d.momentum_1y_pct_rank == null ? dash : f1.format(d.momentum_1y_pct_rank)} (${f1.format(d.momentum_1y_pts)} Pkt.)`,
+    valuation: d.pe_used == null
+      ? (s.eps_trailing != null && s.eps_trailing <= 0 ? `Verlust je Aktie (EPS ${f2.format(s.eps_trailing)}) → kein sinnvolles KGV` : "Kein KGV verfügbar → neutral")
+      : `KGV ${f1.format(d.pe_used)} vs. ${d.pe_benchmark_label} ${f1.format(d.pe_benchmark)} → Verhältnis ${f2.format(d.pe_relative)}`,
+    analysts: `Konsens ${s.recommendation_mean != null ? f2.format(s.recommendation_mean) : dash} (${REC_DE[s.recommendation_key] || dash}) → ${f1.format(d.consensus_pts)} Pkt. · Kursziel ${fmtPct(d.upside_pct)} → ${f1.format(d.target_pts)} Pkt.`,
+    news: `${d.news_counts.positiv} positiv, ${d.news_counts.neutral} neutral, ${d.news_counts.negativ} negativ → Ø ${f2.format(d.news_avg)}`,
+  };
+  const pos52 = s.high_52w && s.low_52w && s.price ? Math.max(0, Math.min(100, (s.price - s.low_52w) / (s.high_52w - s.low_52w) * 100)) : null;
+  const kv = [
+    ["Kurs", fmtPrice(s.price, s.currency)],
+    ["Veränderung 1T", `<span class="${pctClass(s.chg_1d)}">${fmtPct(s.chg_1d, 2)}</span>`],
+    ["Veränderung 1M", `<span class="${pctClass(s.chg_1m)}">${fmtPct(s.chg_1m)}</span>`],
+    ["Veränderung 1J", `<span class="${pctClass(s.chg_1y)}">${fmtPct(s.chg_1y)}</span>`],
+    ["Marktkapitalisierung", fmtCap(s.market_cap, s.currency)],
+    ["KGV (12 M)", s.pe_trailing == null ? dash : f1.format(s.pe_trailing)],
+    ["KGV (erwartet)", s.pe_forward == null ? dash : f1.format(s.pe_forward)],
+    ["Dividendenrendite", s.dividend_yield_pct == null ? dash : `${f2.format(s.dividend_yield_pct)} %`],
+    ["Analysten-Konsens", `${REC_DE[s.recommendation_key] || dash}${s.recommendation_mean != null ? ` (${f2.format(s.recommendation_mean)})` : ""}`],
+    ["Anzahl Analysten", s.analyst_count ?? dash],
+    ["Ø Kursziel", fmtPrice(s.target_mean, s.currency)],
+    ["Kursziel-Spanne", s.target_low != null ? `${f0.format(s.target_low)}–${f0.format(s.target_high)} ${cur(s.currency)}` : dash],
+  ];
+  modal.innerHTML = `
+    <div class="m-head">
+      <div><h3 id="mTitle">${esc(s.name)}</h3>
+        <div class="meta">${esc(s.symbol)} · ${esc(s.index)} · <span class="dot" style="background:${SECTOR_COLOR[s.sector]}"></span>${esc(sectorDE(s.sector))}${s.industry ? ` · ${esc(s.industry)}` : ""}</div></div>
+      <div class="price"><b>${fmtPrice(s.price, s.currency)}</b><span class="${pctClass(s.chg_1d)}">${fmtPct(s.chg_1d, 2)} heute</span></div>
+      <button class="close" id="mClose" aria-label="Schließen">×</button>
+    </div>
+    <div class="m-body">
+      <div>
+        <h4>Score-Aufschlüsselung</h4>
+        <div class="total-row"><span class="big">${f1.format(s.score.total)}</span><span class="rk">von 100 · Rang ${s.score.rank} von ${STOCKS.length}</span></div>
+        ${COMP.map((c) => `
+          <div class="bar-row"><span class="bl"><span class="dot" style="background:${c.color}"></span>${c.label}</span>
+            <div class="track" role="img" aria-label="${c.label}: ${f1.format(s.score[c.key])} von 25"><div class="fill" style="width:${s.score[c.key] / 25 * 100}%;background:${c.color}"></div></div>
+            <span class="bv">${f1.format(s.score[c.key])}<span style="color:var(--text-muted);font-weight:400"> /25</span></span></div>
+          <p class="bar-expl">${expl[c.key]}</p>`).join("")}
+        ${s.score.notes.length ? `<ul class="notes">${s.score.notes.map((n) => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}
+      </div>
+      <div>
+        <h4>Kennzahlen</h4>
+        <div class="grid-kv">${kv.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join("")}</div>
+        ${pos52 != null ? `<div class="range52"><div class="rl"><span>52W-Tief ${fmtPrice(s.low_52w, s.currency)}</span><span>52W-Hoch ${fmtPrice(s.high_52w, s.currency)}</span></div>
+          <div class="rt" role="img" aria-label="Kurs liegt bei ${f0.format(pos52)} Prozent der 52-Wochen-Spanne"><div class="rm" style="left:${pos52}%"></div></div>
+          <div class="rl"><span></span><span>Kurs bei ${f0.format(pos52)} % der 52-Wochen-Spanne</span><span></span></div></div>` : ""}
+      </div>
+      <div><h4>Kursverlauf 12 Monate (Wochenschluss)</h4>${sparkline(s)}</div>
+      <div>
+        <h4>Neueste Nachrichten</h4>
+        <div class="news">${s.news.length ? s.news.map((n) => {
+          const hits = [...(n.sentiment.pos_hits || []).map((h) => "+" + h), ...(n.sentiment.neg_hits || []).map((h) => "−" + h)];
+          return `<a href="${esc(n.url)}" target="_blank" rel="noopener noreferrer"><div class="nt">${esc(n.title)}</div>
+          <div class="nm"><span class="badge ${n.sentiment.label}">${n.sentiment.label}</span>${n.relevant === false ? `<span class="badge neutral" title="Die Schlagzeile nennt das Unternehmen nicht direkt (Yahoo ordnet sie dem Ticker zu)">indirekt</span>` : ""}<span>${fmtDate(n.date)}</span>${n.publisher ? `<span>${esc(n.publisher)}</span>` : ""}${hits.length ? `<span>Signalwörter: ${esc(hits.join(", "))}</span>` : ""}</div></a>`;
+        }).join("") : "<p class='chart-note'>Keine Schlagzeilen verfügbar.</p>"}</div>
+      </div>
+    </div>`;
+  lastFocus = document.activeElement;
+  backdrop.classList.add("open"); backdrop.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+  modal.scrollTop = 0;
+  document.getElementById("mClose").addEventListener("click", closeDetail);
+  document.getElementById("mClose").focus();
+}
+function closeDetail() {
+  backdrop.classList.remove("open"); backdrop.setAttribute("aria-hidden", "true");
+  document.body.style.overflow = "";
+  if (lastFocus) lastFocus.focus();
+}
+backdrop.addEventListener("click", (e) => { if (e.target === backdrop) closeDetail(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && backdrop.classList.contains("open")) closeDetail(); });
+
+// ---------------------------------------------------------------- Start
+renderKPIs(); initFilters(); renderLegend(); renderTable(); renderScatter(); renderMethod();
+let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(renderScatter, 120); });
+})();
+</script>
+</body>
+</html>
